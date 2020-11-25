@@ -1,0 +1,90 @@
+---
+title: "combined_media"
+author: "kai Wang, Shutong Huo, Yuao Yang, Zongchao Liu"
+date: "11/15/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readstata13)
+library(DataCombine)
+library(dplyr)
+library(tidyverse)
+library(mediation)
+```
+
+# Import data
+
+This part followed the previous modifications. To run the codes you have to have `chwmhh18`.
+
+```{r, include=FALSE}
+#### read file child-mother-household
+origin = read.dta13("./data/chwmhh18.dta")
+### clean
+chwmhh <- DropNA(origin, Var = "MT1")
+table(chwmhh$MT12)
+# non-response
+chwmhh <- chwmhh[!(chwmhh$MT1=="9") & !(chwmhh$MT2=="9") & !(chwmhh$MT3=="9") & !(chwmhh$MT4=="9") 
+                 & !(chwmhh$MT9=="9") & !(chwmhh$MT11=="9") & !(chwmhh$MT12=="9") ,]
+table(chwmhh$MT12)
+typeof(chwmhh$MT12)
+### outcome 
+table(chwmhh$stunting)
+### exposure
+#chwmhh$magazien <- ifelse(chwmhh$MT1 =='0', 0, 1)
+#chwmhh$radio <- ifelse(chwmhh$MT2 =='0', 0, 1)
+#chwmhh$tele <- ifelse(chwmhh$MT3 =='0', 0, 1)
+chwmhh$magazine <- as.integer(chwmhh$MT1)
+chwmhh$radio <- as.integer(chwmhh$MT2)
+chwmhh$tele <- as.integer(chwmhh$MT3)
+chwmhh$computer <- as.integer(chwmhh$MT4)  
+chwmhh$internet <- as.integer(chwmhh$MT9)
+chwmhh$phone <- as.integer(chwmhh$MT11)
+class(chwmhh$radio)
+class(chwmhh$welevel1)
+class(chwmhh$wealthp)
+table(chwmhh$phone)
+class(chwmhh$HH6)
+class(chwmhh$stunting)
+chwmhh$welevel1 <- as.integer(chwmhh$welevel1)
+chwmhh$wealthp <- as.integer(chwmhh$wealthp)  
+chwmhh$sex <- factor(chwmhh$HL4, ordered=FALSE)
+chwmhh$urbanrural <- factor(chwmhh$HH6, ordered=FALSE)
+chwmhh$province <- factor(chwmhh$HH7, ordered=FALSE)
+chwmhh$age <- as.integer(chwmhh$UB2)
+chwmhh$stunting <- factor(chwmhh$stunting, ordered=FALSE)
+```
+
+# Combine Media Variables
+
+Combination Rules:
+
+Newly added variables:
+
+- t_1 : magazine
+
+- t_2 : maximum value for the usage of `computer & internet & phone`
+
+- t_3 : maximum value for the usage of `radio & tele`
+
+This combination rule is a simple trial and can be changed later based on other domain knowledge.
+
+```{r}
+### UB2年龄 welevel1母亲教育  wealthp家庭财富 HL4性别 HH6城乡 HH7省份
+reg_data = chwmhh %>%
+  dplyr::select(stunting, magazine, radio, tele, computer, internet, phone, age, welevel1, wealthp, sex, urbanrural, province,WS9,WB4, UB2, MN36,MN39A,MN39C,MN39G,MN39H,MN39I) %>% # 想加变量在这加！
+  # combine media⬇
+  mutate(t_1 = factor(magazine),
+         t_2 = factor(pmax(computer, internet, phone)),
+         t_3 = factor(pmax(radio, tele)))
+```
+
+# Analysis
+
+- use `reg_data` for future analysis. It has combined `media` usage. 
+
+```{r}
+skimr::skim(reg_data)
+```
+
